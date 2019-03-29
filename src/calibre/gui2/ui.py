@@ -626,10 +626,10 @@ class Main(MainWindow, MainWindowMixin, DeviceMixin, EmailMixin,  # {{{
             msg = self.listener.queue.get_nowait()
         except Empty:
             return
-        if msg.startswith('launched:'):
+        if msg.startswith(b'launched:'):
             import json
             try:
-                argv = json.loads(msg[len('launched:'):])
+                argv = json.loads(msg[len(b'launched:'):])
             except ValueError:
                 prints('Failed to decode message from other instance: %r' % msg)
                 if DEBUG:
@@ -644,14 +644,14 @@ class Main(MainWindow, MainWindowMixin, DeviceMixin, EmailMixin,  # {{{
             self.show_windows()
             self.raise_()
             self.activateWindow()
-        elif msg.startswith('refreshdb:'):
+        elif msg.startswith(b'refreshdb:'):
             m = self.library_view.model()
             m.db.new_api.reload_from_db()
             self.refresh_all()
-        elif msg.startswith('shutdown:'):
+        elif msg.startswith(b'shutdown:'):
             self.quit(confirm_quit=False)
-        elif msg.startswith('bookedited:'):
-            parts = msg.split(':')[1:]
+        elif msg.startswith(b'bookedited:'):
+            parts = msg.split(b':')[1:]
             try:
                 book_id, fmt, library_id = parts[:3]
                 book_id = int(book_id)
@@ -664,8 +664,25 @@ class Main(MainWindow, MainWindowMixin, DeviceMixin, EmailMixin,  # {{{
             except Exception:
                 import traceback
                 traceback.print_exc()
+        elif msg.startswith(b'web-store:'):
+            import json
+            try:
+                data = json.loads(msg[len(b'web-store:'):])
+            except ValueError:
+                prints('Failed to decode message from other instance: %r' % msg)
+            path = data['path']
+            if data['tags']:
+                before = self.current_db.new_api.all_book_ids()
+            self.iactions['Add Books'].add_filesystem_book([path], allow_device=False)
+            if data['tags']:
+                db = self.current_db.new_api
+                after = self.current_db.new_api.all_book_ids()
+                for book_id in after - before:
+                    tags = list(db.field_for('tags', book_id))
+                    tags += list(data['tags'])
+                    self.current_db.new_api.set_field('tags', {book_id: tags})
         else:
-            print(msg)
+            prints(u'Ignoring unknown message from other instance: %r' % msg[:20])
 
     def current_view(self):
         '''Convenience method that returns the currently visible view '''
