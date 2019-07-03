@@ -53,9 +53,8 @@ PDFDoc_load(PDFDoc *self, PyObject *args) {
         } catch(const PdfError & err) {
             podofo_set_exception(err);
             return NULL;
-    }
-} else return NULL;
-
+        }
+    } else return NULL;
 
     Py_RETURN_NONE;
 }
@@ -72,7 +71,6 @@ PDFDoc_open(PDFDoc *self, PyObject *args) {
             return NULL;
         }
     } else return NULL;
-
 
     Py_RETURN_NONE;
 }
