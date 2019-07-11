@@ -44,28 +44,30 @@ erase(PDFOutlineItem *self, PyObject *args) {
 
 static PyObject *
 create(PDFOutlineItem *self, PyObject *args) {
-    PyObject *ptitle, *as_child = NULL;
+    PyObject *as_child;
     PDFOutlineItem *ans;
-    int num;
-    PdfString *title;
+    unsigned int num;
+    double left = 0, top = 0, zoom = 0;
     PdfPage *page;
+    char *title_buf;
 
-    if (!PyArg_ParseTuple(args, "Ui|O", &ptitle, &num, &as_child)) return NULL;
-    title = podofo_convert_pystring(ptitle);
-    if (title == NULL) return NULL;
+    if (!PyArg_ParseTuple(args, "esIO|ddd", "UTF-8", &title_buf, &num, &as_child, &left, &top, &zoom)) return NULL;
+    PdfString title(reinterpret_cast<pdf_utf8 *>(title_buf));
 
     ans = PyObject_New(PDFOutlineItem, &PDFOutlineItemType);
     if (ans == NULL) goto error;
     ans->doc = self->doc;
 
     try {
-        page = self->doc->GetPage(num);
-        if (page == NULL) { PyErr_Format(PyExc_ValueError, "Invalid page number: %d", num); goto error; }
-        PdfDestination dest(page);
-        if (as_child != NULL && PyObject_IsTrue(as_child)) {
-            ans->item = self->item->CreateChild(*title, dest);
+        try {
+            page = self->doc->GetPage(num - 1);
+        } catch(const PdfError &err) { page = NULL; }
+        if (page == NULL) { PyErr_Format(PyExc_ValueError, "Invalid page number: %u", num); goto error; }
+        PdfDestination dest(page, left, top, zoom);
+        if (PyObject_IsTrue(as_child)) {
+            ans->item = self->item->CreateChild(title, dest);
         } else
-            ans->item = self->item->CreateNext(*title, dest);
+            ans->item = self->item->CreateNext(title, dest);
     } catch (const PdfError &err) {
         podofo_set_exception(err); goto error;
     } catch (...) {
@@ -73,10 +75,9 @@ create(PDFOutlineItem *self, PyObject *args) {
         goto error;
     }
 
-    delete title;
     return (PyObject*) ans;
 error:
-    Py_XDECREF(ans); delete title;
+    Py_XDECREF(ans);
     return NULL;
 }
 
