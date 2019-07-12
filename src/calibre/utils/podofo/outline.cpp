@@ -53,6 +53,7 @@ create(PDFOutlineItem *self, PyObject *args) {
 
     if (!PyArg_ParseTuple(args, "esIO|ddd", "UTF-8", &title_buf, &num, &as_child, &left, &top, &zoom)) return NULL;
     PdfString title(reinterpret_cast<pdf_utf8 *>(title_buf));
+    PyMem_Free(title_buf); title_buf = NULL;
 
     ans = PyObject_New(PDFOutlineItem, &PDFOutlineItemType);
     if (ans == NULL) goto error;
