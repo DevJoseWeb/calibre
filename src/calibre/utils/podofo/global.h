@@ -43,5 +43,23 @@ extern PdfString * podofo_convert_pystring(PyObject *py);
 extern PdfString * podofo_convert_pystring_single_byte(PyObject *py);
 extern PyObject* write_doc(PdfMemDocument *doc, PyObject *f);
 
+struct PyObjectDeleter {
+    void operator()(PyObject *obj) {
+        Py_XDECREF(obj);
+    }
+};
+// unique_ptr that uses Py_XDECREF as the destructor function.
+typedef std::unique_ptr<PyObject, PyObjectDeleter> pyunique_ptr;
+
+template<typename T>
+static inline bool
+dictionary_has_key_name(const PdfDictionary &d, T key, const char *name) {
+	const PdfObject *val = d.GetKey(key);
+	if (val && val->IsName() && val->GetName().GetName() == name) return true;
+	return false;
 }
 
+extern "C" {
+PyObject* list_fonts(PDFDoc*, PyObject*);
+}
+}
